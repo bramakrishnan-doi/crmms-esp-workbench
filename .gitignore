@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# PyInstaller build output
+build/
+dist/
+*.spec.bak
+
+# Local/runtime artifacts
+*.log
+*.tmp
+crmms-rdf-*
+
+# OS/editor metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/

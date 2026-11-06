@@ -1,0 +1,1 @@
+"""CRMMS Comparison web application."""

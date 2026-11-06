@@ -1,0 +1,662 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Compare CRMMS RiverWare RDF outputs or legacy EnsembleOutput workbooks and build a Word report matching the established CRMMS ESP Summary format." />
+  <title>CRMMS ESP Compare & Report Builder</title>
+  <link rel="stylesheet" href="/static/styles.css?v=6.4.5" />
+<!-- POWELL/MEAD DASHBOARD (EXPLORER) -->
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="CRMMS ESP Compare home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 44 44" role="img"><path d="M7 28c6-1 7-9 13-9 5 0 7 6 12 6 2 0 4-.5 5-1.5V35H7V28Z"/><path d="M7 21c5 0 7-12 15-12 7 0 8 9 15 9v5c-7 0-8-8-15-8-7 0-8 11-15 11v-5Z"/></svg>
+        </span>
+        <span><strong>CRMMS</strong><small>ESP Compare + Report</small></span>
+      </a>
+      <div class="topbar-actions">
+        <span class="status-pill"><span class="status-dot"></span>Local analysis</span>
+        <a class="icon-button" href="/docs" target="_blank" rel="noreferrer" aria-label="Open API documentation" title="API documentation">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 11h6M9 15h6"/></svg>
+        </a>
+      </div>
+    </header>
+
+    <main>
+      <section class="mode-chooser" id="modeChooser">
+        <div class="mode-chooser-inner">
+          <span class="eyebrow">Choose a workspace</span>
+          <h1>What would you like to do?</h1>
+          <p>Start with a single RiverWare run for fast interactive exploration, or compare two runs and build the CRMMS Word report.</p>
+          <div class="mode-cards">
+            <button type="button" class="mode-card" id="chooseExploreMode">
+              <span class="mode-card-icon">⌁</span><strong>View / explore one run</strong>
+              <small>Search slots, inspect traces, zoom, select data, export CSV, and build exploratory plots.</small>
+            </button>
+            <button type="button" class="mode-card" id="chooseCompareMode">
+              <span class="mode-card-icon">⇄</span><strong>Compare two runs</strong>
+              <small>Explore both runs, calculate CRMMS comparisons, and generate the formatted Word report.</small>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="hero" id="uploadSection" hidden>
+        <div class="hero-copy">
+          <div class="hero-kicker-row"><span class="eyebrow">Colorado River modeling</span><button type="button" class="text-button" id="changeModeButton">Change workspace</button></div>
+          <h1 id="heroTitle">Compare two CRMMS runs, then publish the Word report.</h1>
+          <p id="heroDescription">Compare Run A and Run B from <strong>RiverWare .rdf</strong> files (one or many files per run) or from legacy <strong>EnsembleOutput.xlsx</strong> workbooks. Configure exact RDF slots and traces, review the comparison, add notes and assumptions, and download a formatted <strong>.docx</strong>.</p>
+          <div class="hero-meta">
+            <span><svg viewBox="0 0 24 24"><path d="M12 3 4 6v5c0 5 3.4 8.5 8 10 4.6-1.5 8-5 8-10V6l-8-3Z"/><path d="m9 12 2 2 4-5"/></svg> Uploads are processed locally by the app</span>
+            <span><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h8M8 14h5"/></svg> Caller-configurable RDF slots + years</span>
+            <span><svg viewBox="0 0 24 24"><path d="M5 18V9M12 18V5M19 18v-6"/></svg> Word report + publication plots</span>
+          </div>
+        </div>
+
+        <form class="analysis-card" id="compareForm">
+          <div class="card-heading">
+            <div><span class="step-kicker" id="stepKicker">Step 1 · Comparison</span><h2 id="sourceFilesTitle">Select Run A and Run B source files</h2></div>
+            <span class="file-count" id="fileCount">0 files selected</span>
+          </div>
+
+          <div class="source-mode-row">
+            <label>Source format
+              <select id="sourceFormat" name="source_format">
+                <option value="rdf" selected>RiverWare RDF (.rdf) — one or more files per run</option>
+                <option value="xlsx">Legacy EnsembleOutput workbook (.xlsx) — one file per run</option>
+              </select>
+            </label>
+            <div class="source-mode-note" id="sourceModeNote">RDF mode uses the generic RiverWare reader and lets you map each report input to an exact <code>Object.Slot</code>.</div>
+          </div>
+
+          <div class="drop-grid">
+            <label class="drop-zone" id="previousDropZone" data-input="previousFile" tabindex="0">
+              <input type="file" id="previousFile" accept=".rdf" multiple hidden />
+              <span class="drop-icon old" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5M10 13h5M10 17h5"/></svg></span>
+              <span class="drop-copy"><strong>Run B · Baseline</strong><small id="previousFileHelp">Drop one or more .rdf files for the baseline run</small></span>
+              <span class="drop-action">Browse</span><span class="selected-file" aria-live="polite"></span>
+            </label>
+
+            <label class="drop-zone" id="currentDropZone" data-input="currentFile" tabindex="0">
+              <input type="file" id="currentFile" accept=".rdf" multiple hidden />
+              <span class="drop-icon current" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5M10 13h5M10 17h5"/></svg></span>
+              <span class="drop-copy"><strong>Run A · New run</strong><small id="currentFileHelp">Drop one or more .rdf files for the run you want reported</small></span>
+              <span class="drop-action">Browse</span><span class="selected-file" aria-live="polite"></span>
+            </label>
+          </div>
+
+          <div class="rdf-discovery-row rdf-discovery-primary" id="rdfDiscoveryPrimary">
+            <button class="secondary-button" id="discoverRdfButton" type="button">Discover RDF slots</button>
+            <span id="rdfDiscoveryStatus">Select RDF files for Run A and/or Run B, then discover available slots.</span>
+          </div>
+
+          <details class="settings-panel rdf-settings" id="rdfSettingsPanel">
+            <summary>
+              <span><svg viewBox="0 0 24 24"><path d="M5 5h14M5 12h14M5 19h14"/><path d="M9 3v4M15 10v4M11 17v4"/></svg> RiverWare RDF configuration</span>
+              <small><span id="rdfSelectionSummary">2 of 20 report inputs enabled</span> · click to expand</small>
+            </summary>
+            <div class="rdf-panel-intro">
+              Configure this once, save it as your RDF default, and leave this panel collapsed for routine monthly comparisons. Unchecked inputs are intentionally excluded; dependent report sections are skipped without stopping the report.
+            </div>
+            <div class="settings-grid two-col">
+              <label>Calculation trace numbers<input type="text" id="traceNumbers" name="trace_numbers" value="4-33" /><small>Only these traces participate in CRMMS report calculations. Plot/Data Explorer traces are configured separately and may include deterministic traces 1-3.</small></label>
+              <label class="checkbox-setting"><span>Optional CRMMS enrichment</span><span class="checkbox-line"><input type="checkbox" id="addEspYear" name="add_esp_year" checked /> Use Trace 4 → ESP 1991 through Trace 33 → ESP 2020 labels</span><small>Custom explorer labels override these display labels only; actual RiverWare trace numbers are never changed.</small></label>
+            </div>
+            <details class="rdf-slot-section" id="traceLabelConfigurationPanel">
+              <summary><span>Trace labels for plots / Data Explorer</span><small id="traceLabelSummary">Discover a slot to configure labels</small></summary>
+              <p class="rdf-help">The last 30 traces in a selected RDF slot are treated as the hydrologic ensemble for plot labeling. Any preceding two or three traces are available for plotting as Min/Most or Max/Min/Most and are never added to CRMMS calculations unless you explicitly put their numbers in the Calculation trace numbers field.</p>
+              <div id="traceLabelEditor" class="trace-label-editor"><div class="rdf-slot-empty">Discover RDF slots and load a slot to populate actual RDF trace numbers and editable labels.</div></div>
+            </details>
+            <details class="rdf-slot-section" id="explorerPreloadPanel">
+              <summary><span>Explorer preload / cache</span><small id="explorerPreloadSummary">Common result slots preload on Discover</small></summary>
+              <p class="rdf-help">These rules control which slots are cached immediately when RDFs are discovered. Cached slots switch quickly in Data Explorer; any other slot remains available and is loaded lazily the first time you choose it.</p>
+              <div class="settings-grid two-col">
+                <label>Slot patterns to preload<textarea id="explorerPreloadPatterns" rows="6">Powell.Pool Elevation
+Mead.Pool Elevation</textarea><small>One shell-style wildcard per line.</small></label>
+                <label>RDF files whose every slot should preload<textarea id="explorerPreloadFiles" rows="6"></textarea><small>One RDF filename per line. Matching is case-insensitive.</small></label>
+              </div>
+            </details>
+
+            <details class="rdf-slot-section" id="rdfStandardInputsPanel">
+              <summary>
+                <span>CRMMS report input mappings</span>
+                <small id="rdfStandardInputSummary">20 logical inputs · collapsed</small>
+              </summary>
+              <div class="rdf-slot-toolbar">
+                <div>
+                  <strong>Derived CRMMS report inputs</strong>
+                  <small>Monthly and annual mappings are separated below. Opening one timestep group collapses the other so the mapping list stays compact.</small>
+                </div>
+                <div class="rdf-toolbar-actions">
+                  <button class="mini-button" id="selectAllRdfInputs" type="button">Select all</button>
+                  <button class="mini-button" id="selectAvailableRdfInputs" type="button">Available in both</button>
+                  <button class="mini-button" id="clearRdfInputs" type="button">Clear all</button>
+                </div>
+              </div>
+              <p class="rdf-help">These mappings drive the established Powell/Mead summary tables and plots. Annual binary flag inputs from RiverWare flag RDFs are compared by summing their 0/1 values across the selected traces for each year. The generic RDF reader remains slot-agnostic.</p>
+              <div class="rdf-slot-mapping" id="rdfSlotMapping"></div>
+            </details>
+
+            <details class="rdf-slot-section" id="rdfAdditionalSlotsPanel">
+              <summary>
+                <span>Additional RDF slot comparisons</span>
+                <small id="rdfCustomSlotSummary">Discover RDFs to browse every available slot</small>
+              </summary>
+              <div class="rdf-custom-slot-controls">
+                <label class="rdf-slot-search">Search available slots
+                  <input type="search" id="rdfSlotSearch" placeholder="Type an Object.Slot name..." autocomplete="off" />
+                </label>
+                <label>Show
+                  <select id="rdfSlotPresenceFilter">
+                    <option value="both" selected>Available in both runs</option>
+                    <option value="all">All discovered slots</option>
+                    <option value="a-only">Run A only</option>
+                    <option value="b-only">Run B only</option>
+                  </select>
+                </label>
+                <label>Report statistic
+                  <select id="rdfCustomStatistic">
+                    <option value="median" selected>Median</option>
+                    <option value="mean">Mean</option>
+                    <option value="min">Minimum</option>
+                    <option value="max">Maximum</option>
+                  </select>
+                </label>
+                <div class="rdf-toolbar-actions rdf-custom-actions">
+                  <button class="mini-button" id="selectVisibleRdfSlots" type="button">Select visible</button>
+                  <button class="mini-button" id="clearCustomRdfSlots" type="button">Clear selected</button>
+                </div>
+              </div>
+              <p class="rdf-help">Select any discovered <code>Object.Slot</code> to add a comparison table to the report. Monthly and annual slots are separated below; annual slots are additionally grouped by their source RDF file. Annual slots coming from <code>flags.rdf</code> are treated as 0/1 flags and summed across the selected traces for each year. Other slots use the selected generic statistic. This does not change the generic RDF reader.</p>
+              <div class="rdf-available-slots empty" id="rdfAvailableSlots"><div class="rdf-slot-empty">Select RDF files and click <b>Discover RDF slots</b> to populate this list.</div></div>
+            </details>
+
+            <details class="rdf-slot-section" id="rdfPlotConfigurationPanel">
+              <summary>
+                <span>RDF slot plots</span>
+                <small id="rdfPlotSummary">No custom RDF plots configured</small>
+              </summary>
+              <div class="rdf-slot-toolbar">
+                <div>
+                  <strong>Custom plots from discovered slots</strong>
+                  <small>Choose any exact <code>Object.Slot</code> and plot its underlying trace values. Plot definitions are saved with your RDF default.</small>
+                </div>
+                <div class="rdf-toolbar-actions">
+                  <button class="mini-button" id="addRdfPlotButton" type="button">Add plot</button>
+                </div>
+              </div>
+              <p class="rdf-help">There is no Mean/Median/Min/Max aggregation for plots. Line plots show the selected traces through time; box plots use the underlying selected-trace values to show distributions by period; bar plots use the actual trace values at the latest available period in each selected year. Annual slots from <code>flags.rdf</code> remain a special case: line/bar plots show the yearly sum of the 0/1 flags. Plot title and subtitle are editable for publication.</p>
+              <div class="rdf-plot-config-list" id="rdfPlotConfigList"><div class="rdf-slot-empty">Add a plot after discovering RDF slots.</div></div>
+            </details>
+
+            <div class="rdf-profile-row">
+              <div>
+                <strong>Reusable RDF default</strong>
+                <small id="rdfProfileStatus">No browser-local default saved yet.</small>
+              </div>
+              <div class="rdf-toolbar-actions">
+                <button class="secondary-button" id="saveRdfDefaultButton" type="button">Save as default</button>
+                <button class="secondary-button" id="restoreRdfDefaultButton" type="button">Restore saved</button>
+                <button class="secondary-button" id="importConfigurationButton" type="button">Import configuration JSON</button>
+                <button class="text-button rdf-reset-button" id="resetRdfDefaultButton" type="button">Reset</button>
+              </div>
+            </div>
+            <datalist id="rdfSlotOptions"></datalist>
+          </details>
+
+          <details class="settings-panel" id="analysisYearsPanel" open>
+            <summary>
+              <span><svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m4 14-1-2 1-2 2-.5.8-1.9-.9-1.8 1.9-1.9 1.8.9L11.5 4 12 2h2l.5 2 1.9.8 1.8-.9 1.9 1.9-.9 1.8.8 1.9 2 .5v2l-2 .5-.8 1.9.9 1.8-1.9 1.9-1.8-.9-1.9.8-.5 2h-2l-.5-2-1.9-.8-1.8.9-1.9-1.9.9-1.8-.8-1.9-2-.5Z"/></svg> Analysis & report years</span>
+              <small>Comma-separated year lists are supported</small>
+            </summary>
+            <div class="settings-subhead">Run labels</div>
+            <div class="settings-grid two-col">
+              <label>Run A label<input type="text" id="currentLabel" name="current_label" maxlength="60" value="February" /></label>
+              <label>Run B label<input type="text" id="previousLabel" name="previous_label" maxlength="60" value="January" /></label>
+            </div>
+            <div class="settings-subhead">Core dates</div>
+            <div class="settings-grid three-col">
+              <label>EOCY year<input type="number" id="eocyYear" name="eocy_year" min="2000" max="2200" value="2026" /></label>
+              <label>EOCY month<select id="eocyMonth" name="eocy_month">
+                <option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12" selected>December</option>
+              </select></label>
+              <label>Powell operating WY<input type="number" id="powellYear" name="powell_operating_year" min="2000" max="2200" value="2027" /></label>
+            </div>
+            <div class="settings-subhead">Table years</div>
+            <div class="settings-grid two-col">
+              <label>General comparison years<input type="text" id="comparisonYears" name="comparison_years" value="2026, 2027, 2028, 2029, 2030" /><small>Used by the five-year Powell/Mead annual metrics.</small></label>
+              <label>Powell release scenario years<input type="text" id="releaseYears" name="release_years" value="2027, 2028, 2029" /><small>Controls the three grouped release-volume columns.</small></label>
+              <label>Mead Jan. 1 / later-year tables<input type="text" id="meadJan1Years" name="mead_jan1_years" value="2027, 2028, 2029, 2030" /><small>Also used by metrics that intentionally start one year later.</small></label>
+            </div>
+            <div class="settings-subhead">Plot years</div>
+            <div class="settings-grid two-col">
+              <label>Powell inflow plot years<input type="text" id="powellPlotYears" name="powell_plot_years" value="2026, 2027" /></label>
+              <label>Mead flow plot years<input type="text" id="meadPlotYears" name="mead_plot_years" value="2027, 2028" /></label>
+              <label>Lower Basin condition years<input type="text" id="lowerBasinYears" name="lower_basin_years" value="2026, 2027, 2028, 2029" /></label>
+            </div>
+          </details>
+
+          <div class="form-error" id="formError" role="alert" hidden></div>
+          <button class="primary-button" id="compareButton" type="submit" disabled><span>Run comparison</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M14 7l5 5-5 5"/></svg></button>
+        </form>
+      </section>
+
+      <section class="data-explorer" id="dataExplorerSection" hidden>
+        <div class="explorer-header">
+          <div><span class="eyebrow">RiverWare Data Explorer</span><h2>Inspect traces before building the report</h2><p>Choose any discovered Object.Slot, show/hide individual traces, highlight one trace, change aggregation/plot treatment, and inspect the values in a synchronized table.</p></div>
+          <div class="explorer-header-actions">
+            <div class="explorer-export-wrap">
+              <button class="secondary-button" id="exportExplorerChartsButton" type="button">Export charts ▾</button>
+              <div class="explorer-export-menu" id="explorerExportMenu" hidden>
+                <button type="button" data-export-stack="png">Combined PNG</button>
+                <button type="button" data-export-stack="pdf">Print / PDF</button>
+                <button type="button" data-export-stack="html">Interactive HTML</button>
+                <button type="button" data-export-stack="individual-png">Individual PNG files</button>
+                <button type="button" data-export-stack="individual-svg">Individual SVG files</button>
+              </div>
+            </div>
+            <button class="secondary-button" id="openPbiDashboardButton" type="button">Powell/Mead Dashboard</button>
+            <button class="secondary-button" id="openSlotChecksButton" type="button">Data Analysis</button>
+            <button class="secondary-button" id="closeDataExplorerButton" type="button">Close explorer</button>
+          </div>
+        </div>
+        <div class="rdf-source-strip" id="rdfSourceStrip">
+          <div><span class="eyebrow">Data source</span><strong id="rdfSourceName">RDF session</strong><small id="rdfSourceSummary">Discover RDF files to view model metadata.</small></div>
+          <div class="rdf-source-actions"><button class="mini-button" id="editRunNameButton" type="button">Set run month/name</button><button class="mini-button" id="openRdfMetadataButton" type="button">RDF details</button></div>
+        </div>
+        <div class="explorer-workspace">
+          <details class="explorer-controls explorer-global-settings" id="explorerGlobalSettings">
+            <summary class="explorer-global-settings-summary">
+              <span>
+                <strong>GLOBAL PLOT SETTINGS</strong>
+                <small>Slots, stack, traces, colors and shared display settings</small>
+              </span>
+              <span class="explorer-global-settings-icon" aria-hidden="true"></span>
+            </summary>
+
+            <div class="explorer-global-settings-body">
+            <label>Search slots<input type="search" id="explorerSlotSearch" placeholder="Search Object.Slot..." autocomplete="off" /></label>
+            <div class="explorer-slot-load-row">
+              <label>Object.Slot<select id="explorerSlot"><option value="">Discover RDF slots first</option></select></label>
+              <button class="secondary-button explorer-load-slot-button" id="loadExplorerSlotButton" type="button" hidden aria-hidden="true">Load slot</button>
+            </div>
+            <div class="explorer-cache-status" id="explorerCacheStatus">Discover RDF files to create a cached Explorer session.</div>
+            <details class="explorer-stack-settings">
+              <summary>Stack synchronized plots <small id="explorerStackSummary">Primary slot only</small></summary>
+              <div id="explorerStackList" class="explorer-stack-list"><span class="field-help">The primary slot is shown first. Add or remove synchronized slots below.</span></div>
+              <label>Add slots to stack<select id="explorerStackSlots" multiple size="8"><option value="">Discover RDF slots first</option></select></label>
+              <div class="explorer-button-row">
+                <button class="mini-button" id="applyExplorerStack" type="button">Add selected slots</button>
+                <button class="mini-button" id="clearExplorerStack" type="button">Primary only</button>
+              </div>
+              <div class="preset-panel">
+                <label>Plot preset<select id="explorerPlotPreset"><option value="">Loading presets…</option></select></label>
+                <div class="explorer-button-row"><button class="mini-button" id="loadExplorerPlotPreset" type="button">Load preset</button><button class="mini-button" id="saveExplorerPlotPreset" type="button">Save current stack</button><button class="mini-button danger-lite" id="deleteExplorerPlotPreset" type="button">Delete</button></div>
+                
+                <div class="explorer-layout-row explorer-layout-row-v65">
+
+                  <label>
+                    Plot columns
+
+                    <select id="explorerGridColumns">
+                      <option value="auto">Automatic</option>
+                      <option value="1">1 column</option>
+                      <option value="2" selected>2 columns</option>
+                      <option value="3">3 columns</option>
+                    </select>
+                  </label>
+
+
+                  <label class="explorer-plot-height-control">
+
+                    <span class="explorer-plot-height-heading">
+                      <span>Plot height</span>
+
+                      <output
+                        id="explorerPlotHeightValue"
+                        for="explorerPlotHeight"
+                      >
+                        400 px
+                      </output>
+                    </span>
+
+                    <input
+                      id="explorerPlotHeight"
+                      type="range"
+                      min="250"
+                      max="700"
+                      step="25"
+                      value="400"
+                    />
+
+                    <span class="explorer-plot-height-scale">
+                      <small>250 px</small>
+                      <small>700 px</small>
+                    </span>
+
+                  </label>
+
+                </div>
+
+                <small class="field-help" id="explorerPlotPresetHelp">Presets store layout, plot order, slot, chart type, aggregation and per-plot display settings.</small>
+              </div>
+              <small class="field-help">You may add the same slot more than once. Use the per-chart controls to choose chart type and data treatment, then save the current stack as a reusable preset.</small>
+            </details>
+            <div class="explorer-two-col" id="explorerRunChooser">
+              <label class="checkbox-setting compact"><span class="checkbox-line"><input type="checkbox" id="explorerRunA" checked /> Run A</span></label>
+              <label class="checkbox-setting compact"><span class="checkbox-line"><input type="checkbox" id="explorerRunB" checked /> Run B</span></label>
+            </div>
+            <div class="explorer-legacy-plot-defaults" hidden aria-hidden="true">
+              <select id="explorerPlotType"><option value="line" selected>Line</option><option value="box">Box</option><option value="bar">Bar</option></select>
+              <select id="explorerTransform"><option value="raw" selected>Raw timestep values</option><option value="water_year_sum">Water-year sum by trace</option><option value="calendar_year_sum">Calendar-year sum by trace</option><option value="annual_raw">Annual values by trace</option></select>
+              <select id="explorerWyStartMonth"><option value="10" selected>October</option></select>
+              <div id="explorerAnnualBarOptions" hidden><select id="explorerAnnualYear"><option value="">Latest available</option></select><select id="explorerBarSort"><option value="none">Trace order</option><option value="asc">Value · ascending</option><option value="desc">Value · descending</option></select></div>
+            </div>
+            <label>Highlight trace<select id="explorerHighlight"><option value="">None</option></select></label>
+            <div class="explorer-style-grid">
+              <label>Run A color<input type="color" id="explorerRunAColor" value="#167c80" /></label>
+              <label id="explorerRunBColorLabel">Run B color<input type="color" id="explorerRunBColor" value="#d07a28" /></label>
+              <label>Line opacity<input type="range" id="explorerAlpha" min="0.08" max="1" step="0.04" value="0.32" /><output id="explorerAlphaValue">0.32</output></label>
+              <label>Dimmed trace color<input type="color" id="explorerDimColor" value="#9aa5aa" /></label>
+              <label class="checkbox-setting compact overlay-option"><span class="checkbox-line"><input type="checkbox" id="explorerBoxLineOverlay" checked /> Light trace lines behind box plots</span></label>
+              <label>Box trace opacity<input type="range" id="explorerOverlayAlpha" min="0.03" max="0.75" step="0.02" value="0.28" /><output id="explorerOverlayAlphaValue">0.28</output></label>
+            </div>
+
+            
+            <!--
+              v6.2 compatibility controls.
+              Per-chart cards now own these display properties.
+              These hidden controls remain only because older Explorer
+              code/profile functions may still query their IDs.
+            -->
+            <div class="explorer-v62-legacy-controls" hidden aria-hidden="true">
+              <input type="text" id="explorerTitle" />
+              <input type="text" id="explorerSubtitle" />
+              <input type="text" id="explorerXAxisTitle" />
+              <input type="text" id="explorerYAxisTitle" />
+              <input type="range" id="explorerLineWidth" min="0.5" max="3" step="0.1" value="1.0" />
+              <output id="explorerLineWidthValue">1.0</output>
+              <input type="number" id="explorerTableDecimals" min="0" max="6" step="1" value="2" />
+              <input type="checkbox" id="explorerShowGrid" checked />
+              <select id="explorerYAxisMode">
+                <option value="auto" selected>Automatic</option>
+                <option value="fixed">Fixed limits</option>
+              </select>
+              <input type="number" id="explorerYMin" step="any" />
+              <input type="number" id="explorerYMax" step="any" />
+              <input type="checkbox" id="explorerPercentileBand" />
+              <input type="number" id="explorerPercentileLow" value="10" />
+              <input type="number" id="explorerPercentileHigh" value="90" />
+              <input type="number" id="explorerUnitFactor" value="1" />
+              <input type="number" id="explorerUnitOffset" value="0" />
+              <input type="text" id="explorerDisplayUnit" />
+              <textarea id="explorerReferenceLines"></textarea>
+              <textarea id="explorerConditionalRules"></textarea>
+              <input type="text" id="explorerProfileName" />
+              <select id="explorerProfileSelect">
+                <option value="">No saved profiles</option>
+              </select>
+              <button id="saveExplorerProfile" type="button"></button>
+              <button id="loadExplorerProfile" type="button"></button>
+              <button id="deleteExplorerProfile" type="button"></button>
+              <button id="exportExplorerProfileFile" type="button"></button>
+              <button id="importExplorerProfileFileButton" type="button"></button>
+              <input type="file" id="importExplorerProfileFile" />
+            </div>
+
+            <div class="explorer-button-row explorer-report-actions"><button class="secondary-button" id="saveExplorerAsReportPlotButton" type="button">Add to report plots</button></div>
+            <div class="explorer-deterministic-highlights">
+              <span>Highlight deterministic</span>
+              <button class="mini-button" id="highlightAllDeterministic" type="button">Max / Min / Most</button>
+              <button class="mini-button" data-highlight-role="Max" type="button">Max</button>
+              <button class="mini-button" data-highlight-role="Min" type="button">Min</button>
+              <button class="mini-button" data-highlight-role="Most" type="button">Most</button>
+            </div>
+            <details class="explorer-traces">
+              <summary><span>Visible traces</span><small id="explorerTraceSummary">No data loaded</small></summary>
+              <div class="explorer-trace-actions explorer-trace-actions-v62"><button class="mini-button" id="explorerSelectAllTraces" type="button">Select all</button><button class="mini-button" id="explorerSelectEnsembleTraces" type="button">30 ensemble</button><button class="mini-button" id="explorerClearTraces" type="button">Clear</button></div>
+              <div id="explorerTraceList" class="explorer-trace-list"></div>
+            </details>
+            </div>
+          </details>
+
+          <div class="explorer-main">
+            <div id="explorerPlotStack" class="explorer-plot-stack"><div class="explorer-plot-card" data-slot=""><div id="explorerPlot" class="explorer-plot"><div class="empty-preview"><strong>Choose a slot and load it</strong><p>The interactive plot will appear here.</p></div></div></div></div>
+            <details class="explorer-table-settings v6-collapsible-card">
+              <summary>
+                <span>Table settings</span>
+                <small>Formatting and conditional highlighting</small>
+              </summary>
+              <div class="v6-table-settings-body">
+                <label>
+                  Table decimals
+                  <input type="number" id="v6TableDecimals" min="0" max="6" step="1" value="2" />
+                </label>
+                <label class="v6-table-rules">
+                  Conditional rules
+                  <textarea id="v6ConditionalRules" rows="3"
+                    placeholder="< | 1000 | #fde8e8 | Below 1000&#10;> | 1100 | #e8f4ea | Above 1100"></textarea>
+                  <small>operator | value | background color | optional label</small>
+                </label>
+              </div>
+            </details>
+
+            <div class="explorer-table-card">
+              <div class="explorer-table-head">
+                <div><strong>Plotted data</strong><small id="explorerTableMeta">The table follows the current data treatment and visible traces.</small></div>
+                <div class="explorer-table-actions">
+                  <label>Table run<select id="explorerTableRun"><option value="current">Run A</option><option value="previous">Run B</option></select></label>
+                  <button class="mini-button" id="tableUseVisibleRange" type="button">Use traces in plot viewport</button>
+                  <button class="mini-button" id="clearTableSelection" type="button">Clear selection</button>
+                  <button class="mini-button" id="exportExplorerCsv" type="button">Export CSV</button>
+                </div>
+              </div>
+              <div class="explorer-table-scroll" id="explorerTable"><div class="rdf-slot-empty">No slot data loaded.</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="analysis-card pbi-dashboard-section" id="pbiDashboardSection" hidden>
+  <div class="explorer-header">
+    <div><span class="eyebrow">Powell / Mead Dashboard</span><h2>Powell / Mead Dashboard</h2><p>Single-run PBI-style visuals built from the currently loaded RiverWare RDF session: operating conditions, trace details, diversions, ICS bank, and Mead condition distribution.</p></div>
+    <div class="explorer-header-actions"><button class="secondary-button" id="backToExplorerFromPbiButton" type="button">Back to Explorer</button></div>
+  </div>
+  <div id="pbiDashboardBody"></div>
+</section>
+
+      <section class="analysis-card slot-checks-section" id="slotChecksSection" hidden>
+        <div class="explorer-header">
+          <div><span class="eyebrow">RiverWare Data Analysis</span><h2>Filter ensemble traces and inspect related slots</h2><p>Build reusable conditions against any discovered Object.Slot, filter by calendar year or water year, count matching ensemble traces, and return values from related slots at the matching trace/date. Deterministic Max/Min/Most traces are excluded from this analysis.</p></div>
+          <div class="explorer-header-actions"><button class="secondary-button" id="backToExplorerButton" type="button">Back to Explorer</button></div>
+        </div>
+        <div class="slot-checks-workspace slot-checks-workspace-vertical">
+
+          <div class="slot-checks-controls slot-checks-controls-top">
+
+            <div class="slot-check-top-grid">
+              <label>
+                Run
+                <select id="slotCheckRun">
+                  <option value="current">Run A</option>
+                  <option value="previous">Run B</option>
+                </select>
+              </label>
+
+              <label>
+                Condition matching
+                <select id="slotCheckMatchMode">
+                  <option value="same_period" selected>Same trace + period</option>
+                  <option value="trace_any">Trace-level; periods may differ</option>
+                </select>
+              </label>
+
+              <label>
+                Condition logic
+                <select id="slotCheckLogic">
+                  <option value="all" selected>ALL conditions</option>
+                  <option value="any">ANY condition</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="preset-panel analysis-preset-panel">
+              <label>Analysis preset<select id="slotCheckPreset"><option value="">Loading presets…</option></select></label>
+              <div class="explorer-button-row"><button class="mini-button" id="loadSlotCheckPreset" type="button">Load preset</button><button class="mini-button" id="saveSlotCheckPreset" type="button">Save current filters</button><button class="mini-button danger-lite" id="deleteSlotCheckPreset" type="button">Delete</button></div>
+              <small class="field-help" id="slotCheckPresetHelp">Presets store conditions, aggregation, logic, return slots and return-period behavior.</small>
+            </div>
+
+            <div class="slot-checks-heading">
+              <div>
+                <strong>Conditions</strong>
+                <small>
+                  Filter individual values or calculate calendar/water-year
+                  sums, averages, minima, or maxima for each ensemble trace.
+                </small>
+              </div>
+              <button class="mini-button" id="addSlotCheckCondition" type="button">
+                + Add condition
+              </button>
+            </div>
+
+            <div id="slotCheckConditions" class="slot-check-condition-list"></div>
+
+            <small class="field-help">
+              <strong>Water year</strong> means October through September.
+              For example, WY 2024 contains October 2023 through September 2024.
+              Choose <strong>Water year sum</strong> to compare the sum of all
+              values in that water year rather than comparing each monthly
+              value separately.
+            </small>
+
+            <div class="slot-check-return-grid">
+              <label>
+                Related slots to return
+                <select id="slotCheckReturnSlots" multiple size="8">
+                  <option value="">Discover RDF slots first</option>
+                </select>
+                <small>
+                  Select Pool Elevation, Energy, Spill, etc. Values are returned
+                  for traces that satisfy the conditions.
+                </small>
+              </label>
+
+              <label>
+                Return period for aggregate conditions
+                <select id="slotCheckReturnPeriod">
+                  <option value="all" selected>All periods in matching year</option>
+                  <option value="end">End of matching year</option>
+                  <option value="start">Start of matching year</option>
+                </select>
+                <small>
+                  For WY conditions, "end" is September and "start" is October.
+                  Calendar years use December and January.
+                </small>
+              </label>
+            </div>
+
+            <div class="explorer-button-row">
+              <button class="primary-compact" id="runSlotChecks" type="button">
+                Run analysis
+              </button>
+              <button class="mini-button" id="clearSlotChecks" type="button">
+                Reset
+              </button>
+            </div>
+
+          </div>
+
+          <div class="slot-checks-results slot-checks-results-full">
+
+            <div id="slotCheckSummary" class="slot-check-summary">
+              <strong>No analysis run yet.</strong>
+              <span>Add one or more conditions and choose Run analysis.</span>
+            </div>
+
+            <div class="explorer-table-card">
+              <div class="explorer-table-head">
+                <div>
+                  <strong>Matching ensemble events</strong>
+                  <small id="slotCheckMeta">
+                    Results are aligned by actual RiverWare trace number and period.
+                  </small>
+                </div>
+                <div class="explorer-table-actions">
+                  <button class="mini-button" id="exportSlotChecksCsv"
+                          type="button" disabled>
+                    Export CSV
+                  </button>
+                </div>
+              </div>
+
+              <div class="explorer-table-scroll slot-check-results-scroll"
+                   id="slotCheckResults">
+                <div class="rdf-slot-empty">No results yet.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <section class="results" id="resultsSection" hidden>
+        <div class="results-header">
+          <div><span class="eyebrow">Comparison ready</span><h2 id="resultsTitle">Run A vs Run B</h2><p id="resultsSubtitle">CRMMS ESP summary</p></div>
+          <div class="results-actions">
+            <button class="primary-compact" id="openReportBuilderButton" type="button"><svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M15 3v4h4M9 11h6M9 15h6"/></svg> Build Word report</button>
+            <button class="secondary-button" id="exportJsonButton" type="button"><svg viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4M5 20h14"/></svg> Export JSON</button>
+            <button class="secondary-button" id="newComparisonButton" type="button"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 3-6M4 4v6h6"/></svg> New comparison</button>
+          </div>
+        </div>
+
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="workspace">
+          <nav class="section-tabs" aria-label="Result sections">
+            <button class="tab-button active" data-tab="overview">Overview</button>
+            <button class="tab-button" data-tab="powell">Lake Powell</button>
+            <button class="tab-button" data-tab="mead">Lake Mead</button>
+            <button class="tab-button" data-tab="flows">Flow analysis</button>
+            <button class="tab-button" id="customSlotsTabButton" data-tab="slots" hidden>Selected RDF slots</button>
+            <button class="tab-button report-tab" data-tab="report">Report Builder</button>
+          </nav>
+          <div class="tab-panel active" id="panel-overview"></div>
+          <div class="tab-panel" id="panel-powell"></div>
+          <div class="tab-panel" id="panel-mead"></div>
+          <div class="tab-panel" id="panel-flows"></div>
+          <div class="tab-panel" id="panel-slots"></div>
+          <div class="tab-panel" id="panel-report"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer><span>CRMMS ESP Compare & Report Builder</span><span>RiverWare RDF + legacy Excel · FastAPI + Uvicorn · Word via python-docx</span></footer>
+  </div>
+
+  <div class="rdf-metadata-modal" id="rdfMetadataModal" hidden>
+    <div class="rdf-metadata-dialog" role="dialog" aria-modal="true" aria-labelledby="rdfMetadataTitle">
+      <div class="rdf-metadata-head"><div><span class="eyebrow">RiverWare source information</span><h2 id="rdfMetadataTitle">RDF details</h2></div><button class="mini-button" id="closeRdfMetadataButton" type="button">Close</button></div>
+      <div class="run-name-editor">
+        <label>CRMMS ESP run month<input type="month" id="rdfRunMonth" /></label>
+        <label>Display name<input type="text" id="rdfRunDisplayName" placeholder="e.g. September 2026 CRMMS ESP" /></label>
+        <button class="primary-compact" id="saveRdfRunName" type="button">Use display name</button>
+      </div>
+      <div id="rdfMetadataBody"></div>
+    </div>
+  </div>
+
+  <div class="loading-overlay" id="loadingOverlay" hidden>
+    <div class="loader-card" role="status" aria-live="polite">
+      <div class="loader-water"><span></span><span></span><span></span></div>
+      <strong id="loadingTitle">Analyzing CRMMS outputs</strong>
+      <p id="loadingText">Reading source data, calculating trace percentages, and building the comparison.</p>
+    </div>
+  </div>
+  <input type="file" id="settingsFileInput" accept="application/json,.json" hidden />
+  <script src="/static/plotly.min.js"></script>
+  <script src="/static/app.js?v=6.4.5" defer></script>
+</body>
+</html>
