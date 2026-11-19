@@ -1,258 +1,139 @@
-# CRMMS ESP Workbench
+# CRMMS ESP Visualization Tool
 
-**Compare, explore, and report on CRMMS ESP model runs.**
+A serverless, client-side web application for visualizing and analyzing RiverWare **RDF** (RiverWare Data Format) ensemble streamflow forecast outputs — specifically CRMMS ESP (Colorado River Mid-term Modeling System Ensemble Streamflow Prediction) runs for Lake Powell, Lake Mead, and Lower/Upper Colorado River Basin reservoirs.
 
-CRMMS ESP Workbench is a local Windows web application for reviewing CRMMS
-Ensemble Streamflow Prediction (ESP) model output. It compares two runs,
-summarizes the standard Lake Powell and Lake Mead metrics, lets you inspect any
-RiverWare RDF `Object.Slot`, and produces a formatted Word report.
+The tool renders interactive preset plots, slot analysis tables, operating condition probability matrices, reservoir summary pages, and printable PDF reports **entirely in the browser** without requiring a Python backend, database, or server installation.
 
-The application UI and FastAPI service identify themselves as **CRMMS ESP
-Compare & Report Builder**.
+---
 
-## Features
+## Key Features
 
-- Compare Run A and Run B from RiverWare `.rdf` files or legacy
-  `EnsembleOutput.xlsx` workbooks.
-- Use one or many RDF files per run, with exact `Object.Slot` mappings.
-- Preserve RiverWare trace numbers and optionally map Trace 4 through Trace 33
-  to ESP years 1991 through 2020.
-- Review standard comparison sections for Lake Powell, Lake Mead, lower-basin
-  conditions, and flow analysis.
-- Add custom slot tables with selectable statistics.
-- Add custom line, box, or bar plots with independent trace selection.
-- Inspect RDF slots interactively in the Data Explorer, including trace
-  visibility, highlighting, aggregation, synchronized tables, CSV export, and
-  chart export.
-- Use saved Explorer presets and portable Explorer profiles.
-- Inspect the Powell/Mead dashboard and filter ensemble traces with the data
-  analysis view.
-- Generate a publication-ready `.docx` report using the bundled CRMMS report
-  template.
-- Run as a portable one-file Windows executable with no Python installation on
-  the target machine.
+- **100% Client-Side / Zero Install:**
+  - Fast, in-browser parsing of RiverWare `.rdf` files using a pure JavaScript state machine.
+  - No Python, Node.js, or server build step required — runs from any static file server or by opening `index.html` locally in a modern browser.
+- **Dual Ingestion Modes:**
+  - **Web-Served Mode:** Automatically fetches configured RDF files (`data/res.rdf`) on page load.
+  - **Local Disk Mode (`file:///`):** Drag and drop one or multiple `.rdf` files or click to browse.
+- **In-Memory File Registry & Manager:**
+  - Additive multi-file merging (`mergeFiles`) with deduplication across runs.
+  - Toolbar **Files (N)** manager popover: view loaded files, slot/trace counts, remove individual files (`✕`), or unload all data.
+- **Interactive Visualizations (Plotly.js):**
+  - **Chart Types:** Line (timeseries), Scatter (X vs. Y correlation), Bar (annual), Stacked Bar (multi-slot mass balance / storage components), and Box plots.
+  - **Ensemble Cloud / Percentile Bands:**
+    - Visualizes the 10th and 90th percentile envelope with distinct dotted boundaries.
+    - 50th percentile (Median) center curve.
+    - Filters out deterministic runs (Traces 1–3: Min, Most, Max) and computes statistical quantiles across historical ensemble traces (Traces 4–33: 1991–2020), matching Reclamation R script workflows.
+    - Dedicated hover tooltips for statistical contours.
+  - **Stacked Bar Trace Sorting:**
+    - Sort stacked and standard bar charts by trace number, ascending value, descending value, or individual component slot.
+    - Uses categorical axis ordering with historical hydrology trace years (1991–2020) displayed along the x-axis.
+  - **Annual Timestep Detection:** Automatically detects native annual slots (`time_step_unit: year` or year-end timestamps) and provides an interactive Year selector.
+- **Table Engines:**
+  - **Slot Analysis Tables:** Monthly, Water Year (WY), Calendar Year (CY), or annual summary rows; customizable aggregation statistics (`Sum`, `Average`, `Minimum`, `Maximum`, `End of period`). Respects period-end boundaries (December for CY, September for WY).
+  - **Operating Condition Probability Tables:**
+    - Standard Reclamation operating condition / tier probability matrix across run years (e.g. 2026–2031).
+    - Percentage calculation across active ensemble traces: $\frac{\sum \text{flags}}{\text{active traces}} \times 100$.
+    - Shaded section header banners and indented sub-rows.
+    - Arithmetic formula row evaluation (`+`, `−`, `×`, `÷`, `(`, `)`) across slots (e.g., `[UpperBalancing] - [Balancing823]`, `100 - [EqTier]`).
+    - Interactive **Formula Assistant** to select and insert slots and operators.
+    - In-place row editing (`✎`), row reordering (`↑`/`↓`), row deletion, and TSV/CSV export.
+- **Global Cross-Highlighting & Data Tables:**
+  - Click any trace in a plot or cell in a table to highlight that trace (teal) and dim all others across the entire page.
+  - Excel-style multi-region drag selection with live summary statistics (Count, Sum, Avg, Min, Max) and TSV clipboard copy (`Ctrl+C`).
+- **Reservoir System Pages:**
+  - Accordion views organized by major reservoirs (Powell, Mead, Fontenelle, Flaming Gorge, Blue Mesa, Morrow Point, Crystal, Navajo, etc.).
+- **Printable Report Builder:**
+  - Generate full-page executive summaries with editable title, notes, and assumptions, high-resolution chart snapshots, and paginated data tables ready for PDF export.
 
-## Supported inputs
+---
 
-| Format | Details |
-|---|---|
-| RiverWare RDF | `.rdf` files, up to 24 files per run and 150 MB per file |
-| Legacy Excel | `.xlsx` workbooks with the expected CRMMS input sheets, up to 50 MB |
-| Report template | Bundled `reporting/report_template.docx` |
-
-The default calculation traces are **4–33**. Plots and the Data Explorer can
-also include deterministic traces, typically the first 2–3 traces in the file.
-Trace selection for calculations is configured separately from trace selection
-for plots.
-
-## Quick start
-
-### Option 1: Portable executable
-
-If a built executable is available, run:
+## Repository Structure
 
 ```text
-dist\CRMMS_ESP_Compare.exe
+.
+├── index.html               # Main viewer HTML shell, CSS styling, and CONFIG ZONE
+├── parser.js                # RiverWare RDF state-machine parser and multi-file merger
+├── plots.js                 # Plot transforms, Plotly rendering, and card controls
+├── tables.js                # Slot analysis and Operating Condition probability engines
+├── data-tables.js           # Global data tables and Excel-style cell selection
+├── reservoir.js             # Accordion card pages for basin reservoirs
+├── toolbar.js               # Toolbar UI, trace visibility filters, and file popover
+├── report.js                # Printable report overlay generator
+├── bootstrap.js             # File registry, model lifecycle, and boot logic
+├── standalone-app-readme.md # Detailed technical architecture & developer reference
+└── data/                    # (Optional) Default folder for auto-loaded .rdf files
+    └── res.rdf
 ```
 
-The application starts a local server, opens the browser, and serves the UI at
-`http://127.0.0.1:8000` (or the next free port from 8000–8019). Close the
-console window or press `Ctrl+C` to stop it.
+---
 
-The executable is unsigned, so Windows SmartScreen may show a warning on first
-launch. The `dist/` directory is generated locally and is not tracked by Git.
+## Quick Start
 
-### Option 2: Windows batch launcher
+### 1. Running Locally (No Web Server Needed)
+1. Clone or download this repository.
+2. Double-click `index.html` to open it in Google Chrome, Microsoft Edge, or Mozilla Firefox.
+3. Drag and drop one or more `.rdf` files (e.g. `res.rdf`) onto the drop zone, or click **Browse for files…**.
+4. The application will immediately parse the data, display the model run date (e.g. `Model run: July 2026`), and populate your charts and tables.
 
-Double-click:
+### 2. Serving via Local HTTP Server (Recommended for Development)
+To enable automatic background loading from the `data/` directory:
+```bash
+# Using Python 3
+python -m http.server 8000
 
-```text
-Start_CRMMS_Web_App.bat
+# Or using Node.js / npx
+npx serve .
 ```
+Navigate to `http://localhost:8000/` in your browser.
 
-The launcher checks the required files, creates `.venv` if needed, installs
-dependencies when `requirements.txt` changes, starts Uvicorn on port 8000, and
-opens the browser after the health endpoint responds.
+---
 
-### Option 3: Run from source
+## How to Use
 
-Requires Python 3.11 or newer. The project is currently tested with Python
-3.13.7 on Windows.
+### Navigating Presets
+- Use the top navigation bar to switch between configured **Plot Presets**, **Table Presets**, and **Reservoir Pages**.
+- Click **Traces** in the toolbar to toggle deterministic runs (Min, Most, Max) or isolate individual ensemble hydrology traces.
+- Click **Files: N** in the toolbar to view loaded RDF files, add more files, or unload specific runs.
 
-```powershell
-cd C:\Temp\CRMMS_App\App
-py -3 -m venv .venv
-.venv\Scripts\activate
-python -m pip install -r requirements.txt
-python launcher.py
-```
+### Customizing Plots
+- Click **Plot settings** (⚙) on any chart card to adjust:
+  - Plot type (Line, Scatter, Bar, Stacked bar, Box)
+  - Aggregation transform (Raw, Water Year Sum, Calendar Year Sum)
+  - Unit scaling factor, offset, and display label
+  - Y-axis limits and X-axis date range
+  - Reference lines (horizontal thresholds or vertical date markers)
+  - Percentile bands (toggle cloud, configure low/high quantiles)
+- Use the **Year** dropdown on bar and stacked bar charts to inspect specific annual timesteps.
 
-To start the server without the launcher's automatic browser opening, run
-Uvicorn from the package parent directory:
+### Working with Tables
+- **Slot Analysis Tables:** Use the **Filter & aggregate** panel to configure row basis (Monthly, CY, WY), period-end vs. sum statistics, year filters, and conditional value filters.
+- **Operating Conditions Tables:**
+  - View tier probabilities across all active ensemble traces.
+  - Click **+ Add row** to create a Section Header, Slot Flag condition, or Formula expression.
+  - Click **✎** on any row to edit its label, formula, or indent level in place.
+  - Click **Copy for Excel** (TSV) or **Download CSV** to export data.
 
-```powershell
-cd C:\Temp\CRMMS_App
-App\.venv\Scripts\python.exe -m uvicorn App.main:app --host 127.0.0.1 --port 8000
-```
+---
 
-Interactive API documentation is available at `http://127.0.0.1:8000/docs`
-when the server is running.
+## Data Model & Conventions
 
-## Typical workflow
+- **Trace Mapping:**
+  - Traces 1–3: Deterministic scenarios (Min, Most, Max). Opt-in via Traces filter.
+  - Traces 4–33: Ensemble ESP historical hydrology runs corresponding to water years 1991 through 2020.
+- **Reservoir Non-Sum Slots:** Slots representing state variables (Pool Elevation, Storage, Surface Area, Power Plant Cap Fraction, Peak Flow) automatically coerce to end-of-period statistics rather than summations.
+- **Period Boundaries:** Calendar Year "End of Period" statistics strictly enforce December (month 12) data presence; Water Year enforces September (month 9) data.
+- **State Storage:** User card customizations are stored in `sessionStorage` (`crmmsPlotterUI.session.v1`), ensuring adjustments persist while switching tabs during a session, while page refreshes always start clean from `index.html`.
 
-1. Choose **Compare two runs** or **Explore data**.
-2. Upload Run A and Run B files.
-3. For RDF input, discover slots, map the standard CRMMS inputs to exact
-   `Object.Slot` names, select calculation traces, and configure custom tables
-   and plots.
-4. Review the Overview, Lake Powell, Lake Mead, Flow analysis, and Selected RDF
-   slots tabs.
-5. Optionally open the Data Explorer to inspect traces, build plots, export
-   CSV/charts, or add an Explorer plot to the report.
-6. Open **Report Builder**, add notes and assumptions, and download the Word
-   report.
+---
 
-## RDF behavior
+## Technical Documentation
 
-- Slot matching is exact and case-sensitive.
-- A logical CRMMS input can be mapped to any RiverWare `Object.Slot`.
-- A slot can be split across multiple RDF files for the same run.
-- Missing slots and traces are handled section-by-section where possible, so
-  one unavailable input does not necessarily invalidate the whole comparison.
-- Annual binary flag inputs are compared by summing their 0/1 values across the
-  selected traces for each calendar year.
-- Scalar slots are expanded across the run timesteps, matching RWDataPlyr's
-  tabular behavior.
-- RiverWare timestep strings such as `2026-7-31 24:00` are preserved. The
-  normalized `period_date` uses the printed date without rolling `24:00` into
-  the next day.
-- The generic parser in `rdf_reader.py` remains slot-agnostic. CRMMS-specific
-  mappings and report logic live in `comparison.py` and `main.py`.
+For in-depth developer documentation, architecture specifications, and engineering gotchas, refer to:
+- [`standalone-app-readme.md`](standalone-app-readme.md): Architecture overview, file breakdown, and engineering gotchas.
 
-## Project layout
+---
 
-```text
-App/
-  main.py                       FastAPI application and HTTP endpoints
-  comparison.py                 CRMMS comparison engine and RDF adapter
-  rdf_reader.py                 Generic RiverWare RDF reader
-  runtime_paths.py              Source/frozen resource paths
-  launcher.py                   Source and PyInstaller entry point
-  launch_browser.py             Browser helper for the batch launcher
-  __init__.py                   Python package marker
-  explorer_presets.json         Default Explorer plot/analysis presets
-  requirements.txt              Runtime dependencies
-  CRMMS_ESP_Compare.spec        PyInstaller one-file build definition
-  Start_CRMMS_Web_App.bat       Portable source launcher for Windows
-  reporting/
-    report.py                   Word report generation
-    plots.py                    Matplotlib report figures
-    report_template.docx        Bundled CRMMS report template
-  static/
-    index.html                  Application shell
-    app.js                      Frontend logic
-    styles.css                  Frontend styles
-    plotly.min.js               Bundled Plotly runtime
-```
+## License & Attribution
 
-Generated or local-only directories such as `.venv/`, `build/`, `dist/`, and
-`__pycache__/` are excluded by `.gitignore`.
-
-## Build the Windows executable
-
-Install PyInstaller into the virtual environment, then run the spec:
-
-```powershell
-cd C:\Temp\CRMMS_App\App
-.venv\Scripts\python.exe -m pip install pyinstaller
-.venv\Scripts\python.exe -m PyInstaller --noconfirm --clean CRMMS_ESP_Compare.spec
-```
-
-The output is:
-
-```text
-dist\CRMMS_ESP_Compare.exe
-```
-
-The spec bundles the static UI, Explorer presets, report template, and required
-`python-docx` data files, and collects the Uvicorn/AnyIO submodules used at
-runtime.
-
-## API overview
-
-| Endpoint | Purpose |
-|---|---|
-| `GET /api/health` | Health check and backend version |
-| `GET /api/rdf/schema` | Standard CRMMS logical inputs and groups |
-| `POST /api/rdf/inspect` | Inspect one or more uploaded RDF files |
-| `POST /api/rdf/session` | Create a cached RDF Explorer session |
-| `GET /api/rdf/session/{id}/slot` | Read one slot from an Explorer session |
-| `GET /api/rdf/session/{id}/slots` | Read multiple slots from an Explorer session |
-| `POST /api/rdf/explore` | Explore one slot from uploaded RDF files |
-| `POST /api/compare` | Compare Run A and Run B |
-| `POST /api/report/plots` | Render report plot payloads |
-| `POST /api/report` | Build and download the Word report |
-| `GET /api/explorer/presets` | Read saved Explorer presets |
-| `PUT /api/explorer/presets` | Replace saved Explorer presets |
-
-## Configuration and limits
-
-| Setting | Current value |
-|---|---|
-| Backend version | `6.0.0` |
-| Maximum RDF files per run | 24 |
-| Maximum RDF file size | 150 MB |
-| Maximum Excel file size | 50 MB |
-| Explorer session lifetime | 8 hours |
-| Maximum retained Explorer sessions | 4 |
-| Default calculation traces | 4–33 |
-| Default ESP mapping | Trace 4 → 1991 through Trace 33 → 2020 |
-
-In a frozen build, editable Explorer presets are stored under
-`%LOCALAPPDATA%\CRMMS_ESP_Compare\explorer_presets.json`. The server binds to
-`127.0.0.1` only.
-
-## Performance notes
-
-The RDF reader is designed for repeated interactive use:
-
-- Discovery metadata is cached by resolved path, file size, and modification
-  time.
-- All requested slots for a file are read in one pass instead of one pass per
-  slot.
-- Timestep parsing is cached.
-- The comparison layer preloads the slots needed by the standard report and
-  custom tables/plots before calculating sections.
-
-Performance depends on the number of RDF files, traces, slots, and timesteps.
-Large daily files naturally produce more rows and take longer than small
-monthly files.
-
-## Troubleshooting
-
-- **Port already in use:** the portable executable chooses the next free port
-  between 8000 and 8019. The batch launcher checks for an existing server on
-  port 8000.
-- **SmartScreen warning:** the executable is not code-signed. Use
-  **More info → Run anyway** only if you trust the build.
-- **RDF slot not found:** confirm the exact, case-sensitive `Object.Slot` name
-  from the RDF inspection output.
-- **Missing traces or slots:** review the section-level warnings on the results
-  page. A missing input may only affect the sections that use it.
-- **Presets not persisting:** verify that `%LOCALAPPDATA%` is writable in a
-  frozen build, or `explorer_presets.json` is writable when running from
-  source.
-
-## Acknowledgements
-
-The RDF parser is derived from the public-domain RWDataPlyr 0.6.6
-implementation (CC0; U.S. Bureau of Reclamation) and is validated against its
-sample RDF formats.
-
-The application uses FastAPI, Uvicorn, pandas, openpyxl, python-docx,
-Matplotlib, and Plotly.
-
-## License
-
-No license file is currently included in this repository. Contact the
-repository owner for reuse or distribution terms.
+Developed for the U.S. Department of the Interior / Bureau of Reclamation Colorado River Mid-term Modeling System (CRMMS) workflows.
+Built with [Plotly.js](https://plotly.com/javascript/). Pure client-side open web technologies (HTML5, ES6 JavaScript, CSS3).
