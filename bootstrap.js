@@ -267,6 +267,24 @@ async function boot() {
       failures.push(path + " \u2014 " + (err && err.message ? err.message : err));
     }
   }
+  // If at least one file loaded successfully, proceed with the available files
+  if (parsed.length > 0) {
+    try {
+      loadData(parsed, { replace: true, preserveView: false });
+      if (failures.length) {
+        setStatus(
+          "Loaded <b>" + parsed.length + "</b> file" + (parsed.length > 1 ? "s" : "") +
+          ", but could not fetch: " + failures.map(f => "<code>" + f + "</code>").join(", "),
+          "warning"
+        );
+      }
+    } catch (err) {
+      setStatus("Failed to process RDF data: " + (err && err.message ? err.message : err), "error");
+    }
+    return;
+  }
+
+  // Only show drop zone / error if all files failed
   if (failures.length) {
     const onDisk = location.protocol === "file:";
     setStatus(
@@ -280,11 +298,6 @@ async function boot() {
       ? "Browsers block automatic file reading from disk — drop your .rdf files here (they are processed locally, nothing is uploaded)."
       : "The configured RDF files could not be fetched — you can still drop .rdf files here.");
     return;
-  }
-  try {
-    loadData(parsed, { replace: true, preserveView: false });
-  } catch (err) {
-    setStatus("Failed to process RDF data: " + (err && err.message ? err.message : err), "error");
   }
 }
 
